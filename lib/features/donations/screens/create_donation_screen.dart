@@ -275,7 +275,7 @@ class _CreateDonationScreenState extends ConsumerState<CreateDonationScreen> {
                         decoration: const InputDecoration(labelText: 'Unit *'),
                         items: AppConstants.supportedUnits.map((u) {
                           return DropdownMenuItem(value: u, child: Text(u));
-                        }).toList>,
+                        }).toList(),
                         onChanged: (val) {
                           if (val != null) setState(() => _selectedUnit = val);
                         },

@@ -91,6 +91,11 @@
       "dependencies": []
     },
     {
+      "name": "vector_math",
+      "version": "2.4.0",
+      "dependencies": []
+    },
+    {
       "name": "test_api",
       "version": "0.7.12",
       "dependencies": [
@@ -115,6 +120,11 @@
     {
       "name": "path",
       "version": "1.9.1",
+      "dependencies": []
+    },
+    {
+      "name": "meta",
+      "version": "1.18.3",
       "dependencies": []
     },
     {
@@ -180,11 +190,6 @@
       "dependencies": [
         "path"
       ]
-    },
-    {
-      "name": "meta",
-      "version": "1.19.0",
-      "dependencies": []
     },
     {
       "name": "clock",
@@ -253,11 +258,6 @@
       ]
     },
     {
-      "name": "vector_math",
-      "version": "2.4.3",
-      "dependencies": []
-    },
-    {
       "name": "async",
       "version": "2.13.1",
       "dependencies": [
@@ -297,9 +297,8 @@
     },
     {
       "name": "xml",
-      "version": "7.1.0",
+      "version": "7.0.1",
       "dependencies": [
-        "args",
         "collection",
         "meta",
         "petitparser"
@@ -307,16 +306,11 @@
     },
     {
       "name": "petitparser",
-      "version": "7.1.0",
+      "version": "7.0.2",
       "dependencies": [
         "collection",
         "meta"
       ]
-    },
-    {
-      "name": "args",
-      "version": "2.7.0",
-      "dependencies": []
     },
     {
       "name": "bidi",

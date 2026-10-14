@@ -67,7 +67,7 @@ class AppTheme {
           letterSpacing: -0.2,
         ),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: surfaceCardLight,
         elevation: 1.5,
         shadowColor: primaryGreen.withOpacity(0.08),
@@ -198,7 +198,7 @@ class AppTheme {
           letterSpacing: -0.2,
         ),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: surfaceCardDark,
         elevation: 0,
         shape: RoundedRectangleBorder(
