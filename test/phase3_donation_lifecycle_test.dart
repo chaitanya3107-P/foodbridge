@@ -88,6 +88,14 @@ void main() {
     test('3. Scheduling & Collection: Keeps listed vs actual collected quantity strictly separated', () async {
       await repo.switchDemoUser(UserRole.ngoStaff);
 
+      // Accept donation first to transition from awaitingNgoReview to accepted
+      await repo.submitReview(
+        donationId: 'don_101',
+        decision: ReviewDecision.accepted,
+        checklist: [],
+        ngoNotes: 'Approved for pickup',
+      );
+
       // Schedule pickup
       final pickup = await repo.schedulePickup(
         donationId: 'don_101',

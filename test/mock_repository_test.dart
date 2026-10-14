@@ -86,6 +86,14 @@ void main() {
     test('Actual collected quantity is stored separately from listed quantity', () async {
       await repo.switchDemoUser(UserRole.ngoStaff);
 
+      // Accept donation first to transition from awaitingNgoReview to accepted
+      await repo.submitReview(
+        donationId: 'don_101',
+        decision: ReviewDecision.accepted,
+        checklist: [],
+        ngoNotes: 'Accepted for pickup test',
+      );
+
       // Schedule pickup for accepted donation don_101
       final pickup = await repo.schedulePickup(
         donationId: 'don_101',

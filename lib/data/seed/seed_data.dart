@@ -471,7 +471,7 @@ class SeedData {
   // 8. Prepopulated Awareness Educational Content & Quizzes
   // ---------------------------------------------------------------------------
   static final List<AwarenessContent> awarenessContent = [
-    const AwarenessContent(
+    AwarenessContent(
       contentId: 'aware_1',
       title: 'First-In, First-Out (FIFO) Storage Management',
       type: AwarenessContentType.tip,
@@ -480,7 +480,7 @@ class SeedData {
       sourceReviewer: 'City Harvest Food Safety Committee',
       publishedDate: DateTime(2026, 9, 1),
     ),
-    const AwarenessContent(
+    AwarenessContent(
       contentId: 'aware_2',
       title: 'The Temperature Danger Zone (5°C to 63°C)',
       type: AwarenessContentType.poster,
@@ -489,7 +489,7 @@ class SeedData {
       sourceReviewer: 'Partner NGO Hygiene Taskforce',
       publishedDate: DateTime(2026, 9, 10),
     ),
-    const AwarenessContent(
+    AwarenessContent(
       contentId: 'aware_3',
       title: 'FAQ: Can Food Past Its "Best Before" Date Be Donated?',
       type: AwarenessContentType.faq,
