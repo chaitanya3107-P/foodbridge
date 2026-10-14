@@ -1,0 +1,188 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // -------------------------------------------------------------
+    // Helper Functions for Role-Based Access Control (RBAC)
+    // -------------------------------------------------------------
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isApproved() {
+      return isAuthenticated() && 
+        (getUserData().approvalStatus == 'approved' || getUserData().role == 'awareness');
+    }
+
+    function hasRole(role) {
+      return isApproved() && getUserData().role == role;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && getUserData().role == 'admin';
+    }
+
+    function isNgoStaff() {
+      return hasRole('ngo_staff') || isAdmin();
+    }
+
+    function isDonor() {
+      return hasRole('donor') || isAdmin();
+    }
+
+    function isVolunteer() {
+      return hasRole('volunteer') || isAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // 1. Users Collection
+    // -------------------------------------------------------------
+    match /users/{userId} {
+      // Any authenticated user can read their own profile; Admin can read all
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      
+      // User can create their own profile during registration; Admin role CANNOT be self-selected
+      allow create: if isAuthenticated() && request.auth.uid == userId
+        && request.resource.data.role != 'admin'
+        && request.resource.data.approvalStatus == 'pending';
+        
+      // Only Admin can update role or approval status; User can update non-critical profile fields
+      allow update: if isAdmin() || (
+        isAuthenticated() && request.auth.uid == userId 
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'approvalStatus'])
+      );
+      
+      allow delete: if isAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // 2. Organisations Collection
+    // -------------------------------------------------------------
+    match /organisations/{orgId} {
+      allow read: if isApproved();
+      allow create, update: if isApproved() && (isNgoStaff() || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // 3. Donations Collection
+    // -------------------------------------------------------------
+    match /donations/{donationId} {
+      // Donors see own; NGO staff & Admin see all; Assigned volunteers see their assigned donation
+      allow read: if isApproved() && (
+        isNgoStaff() ||
+        (isDonor() && resource.data.donorId == request.auth.uid) ||
+        (isVolunteer() && exists(/databases/$(database)/documents/pickups/$(donationId)) 
+          && get(/databases/$(database)/documents/pickups/$(donationId)).data.assignedVolunteerId == request.auth.uid)
+      );
+
+      // Donors can create listings; initial status must strictly be 'submitted' or 'awaiting_ngo_review'
+      allow create: if isDonor() 
+        && request.resource.data.donorId == request.auth.uid
+        && (request.resource.data.status == 'submitted' || request.resource.data.status == 'awaiting_ngo_review');
+
+      // Donors can update their own listing if clarification requested or still draft
+      // NGO staff can update status (review, schedule, cancel)
+      allow update: if isApproved() && (
+        (isDonor() && resource.data.donorId == request.auth.uid 
+          && (resource.data.status == 'clarification_requested' || resource.data.status == 'draft')) ||
+        isNgoStaff()
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // 4. Reviews Collection (NGO authority)
+    // -------------------------------------------------------------
+    match /reviews/{reviewId} {
+      // NGO staff and Admin can read all reviews; Donors can read review decisions on their own donations
+      allow read: if isApproved() && (
+        isNgoStaff() ||
+        (isDonor() && get(/databases/$(database)/documents/donations/$(resource.data.donationId)).data.donorId == request.auth.uid)
+      );
+
+      // Only verified NGO staff or Admin can write review decisions
+      allow create, update: if isNgoStaff();
+      allow delete: if isAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // 5. Pickups Collection
+    // -------------------------------------------------------------
+    match /pickups/{pickupId} {
+      // Volunteers can ONLY see pickups assigned to them; NGO staff and Admin see all
+      allow read: if isApproved() && (
+        isNgoStaff() ||
+        (isVolunteer() && resource.data.assignedVolunteerId == request.auth.uid) ||
+        (isDonor() && get(/databases/$(database)/documents/donations/$(resource.data.donationId)).data.donorId == request.auth.uid)
+      );
+
+      // NGO staff can schedule/assign pickups
+      allow create: if isNgoStaff();
+
+      // Volunteer can update collection status and record actual collected quantity; NGO can manage
+      allow update: if isApproved() && (
+        isNgoStaff() ||
+        (isVolunteer() && resource.data.assignedVolunteerId == request.auth.uid 
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'actualCollectedQuantity', 'actualPickupTime', 'driverNotes']))
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // 6. Distributions Collection (Food Bank Ledger)
+    // -------------------------------------------------------------
+    match /distributions/{distId} {
+      // Confidential distribution records: visible strictly to NGO staff and Admin
+      allow read, write: if isNgoStaff();
+    }
+
+    // -------------------------------------------------------------
+    // 7. Waste Audits Collection
+    // -------------------------------------------------------------
+    match /waste_audits/{auditId} {
+      // Donors see their own site audits; NGO staff and Admin see all
+      allow read: if isApproved() && (
+        isNgoStaff() ||
+        (isDonor() && resource.data.recordedByUserId == request.auth.uid)
+      );
+
+      // Donors and NGO staff can submit daily waste audits
+      allow create, update: if isApproved() && (isDonor() || isNgoStaff());
+      allow delete: if isAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // 8. Awareness Content & Quizzes
+    // -------------------------------------------------------------
+    match /awareness_content/{contentId} {
+      // Publicly viewable by all authenticated users (including awareness participants)
+      allow read: if isAuthenticated();
+      // Only Admin or verified NGO staff can publish content
+      allow write: if isNgoStaff() || isAdmin();
+    }
+
+    match /awareness_quizzes/{quizId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // 9. Audit Log Collection
+    // -------------------------------------------------------------
+    match /audit_log/{logId} {
+      // Only Admin can read system audit trail
+      allow read: if isAdmin();
+      // Any authenticated actor can append audit entries for transparency
+      allow create: if isAuthenticated();
+      // No one can modify or delete existing audit logs
+      allow update, delete: if false;
+    }
+  }
+}
