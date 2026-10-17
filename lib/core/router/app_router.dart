@@ -17,6 +17,7 @@ import '../../features/awareness/screens/quiz_screen.dart';
 import '../../features/waste_audit/screens/waste_audit_screen.dart';
 import '../../features/impact_report/screens/impact_report_screen.dart';
 import '../../features/profile/screens/profile_settings_screen.dart';
+import '../../features/map/screens/ngo_map_screen.dart';
 
 /// Navigation routes for FoodBridge
 class AppRoutes {
@@ -35,6 +36,7 @@ class AppRoutes {
   static const wasteAudit = '/waste-audit';
   static const impactReport = '/impact-report';
   static const profileSettings = '/profile';
+  static const mapView = '/map';
 }
 
 /// Provider for GoRouter configured with authentication and approval state redirects.
@@ -128,6 +130,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.profileSettings,
         builder: (context, state) => const ProfileSettingsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.mapView,
+        builder: (context, state) => const NgoMapScreen(),
       ),
     ],
   );

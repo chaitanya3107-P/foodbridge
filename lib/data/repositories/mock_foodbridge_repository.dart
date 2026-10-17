@@ -10,6 +10,7 @@ import '../models/awareness_model.dart';
 import '../models/audit_log_model.dart';
 import '../../core/state/donation_status_engine.dart';
 import '../../core/calculators/impact_calculators.dart';
+import '../../core/services/realtime_service.dart';
 import '../seed/seed_data.dart';
 import 'foodbridge_repository.dart';
 
@@ -51,8 +52,8 @@ class MockFoodBridgeRepository implements FoodBridgeRepository {
     _awarenessContent = List.from(SeedData.awarenessContent);
     _quiz = SeedData.sampleQuiz;
     _auditLogs = List.from(SeedData.initialAuditLogs);
-    // Default logged in user: Donor
-    _currentUser = _users.firstWhere((u) => u.role == UserRole.donor);
+    // Initial user is null so user starts on the Welcome / Role Login screen
+    _currentUser = null;
   }
 
   // ---------------------------------------------------------------------------
@@ -151,6 +152,49 @@ class MockFoodBridgeRepository implements FoodBridgeRepository {
     }
   }
 
+  @override
+  Future<void> updateOrganisationStatus({
+    required String organisationId,
+    required bool isAcceptingDonations,
+    required String capacityStatus,
+    String? operatingHours,
+  }) async {
+    final index = _organisations.indexWhere((o) => o.organisationId == organisationId);
+    if (index != -1) {
+      final current = _organisations[index];
+      final updated = current.copyWith(
+        isAcceptingDonations: isAcceptingDonations,
+        capacityStatus: capacityStatus,
+        operatingHours: operatingHours ?? current.operatingHours,
+      );
+      _organisations[index] = updated;
+
+      RealtimeService().emit(
+        type: RealtimeEventType.ngoStatus,
+        title: 'NGO Status Updated',
+        message: '${updated.name} updated intake status to "$capacityStatus" (${isAcceptingDonations ? "Accepting Donations" : "Temporarily Paused"}).',
+        metadata: {'orgId': organisationId, 'isAccepting': isAcceptingDonations},
+      );
+
+      RealtimeService().emit(
+        type: RealtimeEventType.map,
+        title: 'Map Availability Updated',
+        message: 'Map markers refreshed with new operational status for ${updated.name}.',
+        metadata: {'orgId': organisationId},
+      );
+
+      await logAuditEntry(
+        action: 'ORGANISATION_STATUS_CHANGED',
+        targetCollection: 'organisations',
+        targetId: organisationId,
+        metadata: {
+          'isAcceptingDonations': isAcceptingDonations,
+          'capacityStatus': capacityStatus,
+        },
+      );
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Donations Lifecycle & State Engine
   // ---------------------------------------------------------------------------
@@ -169,6 +213,8 @@ class MockFoodBridgeRepository implements FoodBridgeRepository {
     required String locationAddress,
     required String contactPerson,
     required String contactPhone,
+    double? latitude,
+    double? longitude,
   }) async {
     final user = _currentUser;
     if (user == null) {
@@ -203,6 +249,8 @@ class MockFoodBridgeRepository implements FoodBridgeRepository {
       pickupDeadline: pickupDeadline,
       locationName: locationName,
       locationAddress: locationAddress,
+      latitude: latitude ?? 18.5293,
+      longitude: longitude ?? 73.8565,
       contactPerson: contactPerson,
       contactPhone: contactPhone,
       // CRITICAL PRINCIPLE: Listings always start as Awaiting NGO Review
@@ -212,6 +260,22 @@ class MockFoodBridgeRepository implements FoodBridgeRepository {
     );
 
     _donations.insert(0, newDonation);
+
+    // 1. Feature: Food availability becomes real-time
+    RealtimeService().emit(
+      type: RealtimeEventType.foodAvailability,
+      title: 'New Food Donation Available',
+      message: '$foodDescription ($listedQuantity $unit) posted at $locationName.',
+      metadata: {'donationId': newDonation.donationId},
+    );
+
+    // 4. Feature: Map updates when donation coordinates change / new donation posted
+    RealtimeService().emit(
+      type: RealtimeEventType.map,
+      title: 'Food Donation Pin Added to Map',
+      message: 'New surplus pickup marker active at $locationAddress (Pune).',
+      metadata: {'donationId': newDonation.donationId},
+    );
 
     await logAuditEntry(
       action: 'DONATION_CREATED',
@@ -305,6 +369,14 @@ class MockFoodBridgeRepository implements FoodBridgeRepository {
         if (cancelReason != null) 'cancelReason': cancelReason,
         ...?metadata,
       },
+    );
+
+    // 3. Feature: Donation tracking becomes real-time
+    RealtimeService().emit(
+      type: RealtimeEventType.donationTracking,
+      title: 'Donation Tracking: ${newStatus.displayName}',
+      message: 'Donation status updated from ${current.status.displayName} to ${newStatus.displayName}.',
+      metadata: {'donationId': donationId, 'status': newStatus.name},
     );
   }
 
@@ -453,6 +525,78 @@ class MockFoodBridgeRepository implements FoodBridgeRepository {
         'unit': actualQuantityUnit,
       },
     );
+
+    // 6. Feature: Impact dashboard becomes real-time
+    RealtimeService().emit(
+      type: RealtimeEventType.impactDashboard,
+      title: 'Impact Dashboard Recalculated',
+      message: 'Added $actualCollectedQuantity $actualQuantityUnit of verified collected surplus food.',
+      metadata: {'collectedKg': actualCollectedQuantity},
+    );
+  }
+
+  @override
+  Future<void> acceptPickupRequest({required String pickupId}) async {
+    final user = _currentUser;
+    if (user == null || user.role != UserRole.volunteer) {
+      throw StateError('Only volunteer drivers can accept pickup requests.');
+    }
+
+    final pIndex = _pickups.indexWhere((p) => p.pickupId == pickupId);
+    if (pIndex == -1) {
+      throw ArgumentError('Pickup with id $pickupId not found.');
+    }
+
+    final pickup = _pickups[pIndex];
+    _pickups[pIndex] = pickup.copyWith(
+      assignedVolunteerId: user.userId,
+      assignedVolunteerName: user.name,
+      status: PickupStatus.scheduled,
+    );
+
+    RealtimeService().emit(
+      type: RealtimeEventType.donationTracking,
+      title: 'Pickup Claimed by Driver',
+      message: '${user.name} accepted the pickup request and is now assigned.',
+      metadata: {'pickupId': pickupId, 'driverId': user.userId, 'driverName': user.name},
+    );
+  }
+
+  @override
+  Future<void> updatePickupTripStatus({
+    required String pickupId,
+    required PickupStatus status,
+    String? driverNotes,
+  }) async {
+    final pIndex = _pickups.indexWhere((p) => p.pickupId == pickupId);
+    if (pIndex == -1) return;
+
+    final pickup = _pickups[pIndex];
+    _pickups[pIndex] = pickup.copyWith(
+      status: status,
+      driverNotes: driverNotes ?? pickup.driverNotes,
+    );
+
+    if (status == PickupStatus.delivered) {
+      final dIndex = _donations.indexWhere((d) => d.donationId == pickup.donationId);
+      if (dIndex != -1 && _donations[dIndex].status == DonationStatus.collected) {
+        await updateDonationStatus(
+          pickup.donationId,
+          DonationStatus.distributionRecorded,
+          metadata: {
+            'foodBankDeliveredAt': DateTime.now().toIso8601String(),
+            'destination': 'Sevadeep Platform Food Bank, Kalyani Nagar',
+          },
+        );
+      }
+    }
+
+    RealtimeService().emit(
+      type: RealtimeEventType.donationTracking,
+      title: 'Live Trip Progress: ${status.displayName}',
+      message: '${pickup.assignedVolunteerName ?? "Driver"} updated trip: ${status.displayName}.',
+      metadata: {'pickupId': pickupId, 'status': status.name},
+    );
   }
 
   @override
@@ -486,8 +630,10 @@ class MockFoodBridgeRepository implements FoodBridgeRepository {
     if (user == null) return [];
 
     if (user.role == UserRole.volunteer) {
-      // Volunteers see ONLY pickups assigned to them
-      return _pickups.where((p) => p.assignedVolunteerId == user.userId).toList();
+      // Volunteers see pickups assigned to them OR open broadcast pickups waiting for driver acceptance
+      return _pickups
+          .where((p) => p.assignedVolunteerId == user.userId || p.assignedVolunteerId == null)
+          .toList();
     }
 
     if (user.role == UserRole.ngoStaff || user.role == UserRole.admin) {
@@ -555,6 +701,14 @@ class MockFoodBridgeRepository implements FoodBridgeRepository {
     await updateDonationStatus(donationId, DonationStatus.distributionRecorded);
     await updateDonationStatus(donationId, DonationStatus.closed);
 
+    // 6. Feature: Impact dashboard becomes real-time
+    RealtimeService().emit(
+      type: RealtimeEventType.impactDashboard,
+      title: 'Food Bank Distribution Recorded',
+      message: 'Recorded distribution of $quantityDistributed $unit to $recipientLocation ($destinationCategory).',
+      metadata: {'distributedKg': quantityDistributed},
+    );
+
     return newDistribution;
   }
 
@@ -610,9 +764,7 @@ class MockFoodBridgeRepository implements FoodBridgeRepository {
   @override
   Future<List<WasteAuditModel>> getWasteAudits() async {
     final user = _currentUser;
-    if (user == null) return [];
-
-    if (user.role == UserRole.donor) {
+    if (user != null && user.role == UserRole.donor) {
       return _wasteAudits.where((a) => a.recordedByUserId == user.userId).toList();
     }
     return List.unmodifiable(_wasteAudits);

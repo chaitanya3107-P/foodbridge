@@ -12,6 +12,7 @@ import '../../../core/router/app_router.dart';
 import '../../../data/models/donation_model.dart';
 import '../../../data/models/review_model.dart';
 import '../../logistics/screens/pickup_tracking_screen.dart';
+import '../../logistics/widgets/dispatch_and_porter_sheet.dart';
 
 class NgoReviewScreen extends ConsumerStatefulWidget {
   final DonationModel donation;
@@ -124,8 +125,9 @@ class _NgoReviewScreenState extends ConsumerState<NgoReviewScreen> {
         );
 
         if (decision == ReviewDecision.accepted) {
-          // Offer immediate prompt to schedule pickup logistics
-          _showSchedulePrompt();
+          // Immediately open the Dispatch & Porter booking sheet
+          await DispatchAndPorterSheet.show(context, widget.donation);
+          if (mounted) Navigator.pop(context);
         } else {
           Navigator.pop(context);
         }
@@ -139,46 +141,6 @@ class _NgoReviewScreenState extends ConsumerState<NgoReviewScreen> {
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
-  }
-
-  void _showSchedulePrompt() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.local_shipping_rounded, color: AppTheme.primaryGreen),
-            SizedBox(width: 8),
-            Text('Schedule Pickup Now?'),
-          ],
-        ),
-        content: const Text(
-          'Donation intake has been accepted. Would you like to assign a volunteer driver and dispatch pickup window now?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              Navigator.pop(context);
-            },
-            child: const Text('Later'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const PickupTrackingScreen(),
-                ),
-              );
-            },
-            child: const Text('Schedule Pickup'),
-          ),
-        ],
-      ),
-    );
   }
 
   @override

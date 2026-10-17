@@ -2,6 +2,8 @@ enum PickupStatus {
   scheduled,
   enRoute,
   collected,
+  enRouteToFoodBank,
+  delivered,
   failed,
   cancelled;
 
@@ -10,9 +12,13 @@ enum PickupStatus {
       case PickupStatus.scheduled:
         return 'Pickup Scheduled';
       case PickupStatus.enRoute:
-        return 'En Route';
+        return 'En Route to Donor';
       case PickupStatus.collected:
-        return 'Collected';
+        return 'Weighed & Collected';
+      case PickupStatus.enRouteToFoodBank:
+        return 'En Route to Food Bank';
+      case PickupStatus.delivered:
+        return 'Delivered to Food Bank';
       case PickupStatus.failed:
         return 'Collection Failed';
       case PickupStatus.cancelled:
@@ -27,6 +33,11 @@ enum PickupStatus {
         return PickupStatus.enRoute;
       case 'collected':
         return PickupStatus.collected;
+      case 'en_route_to_food_bank':
+      case 'enroutetofoodbank':
+        return PickupStatus.enRouteToFoodBank;
+      case 'delivered':
+        return PickupStatus.delivered;
       case 'failed':
         return PickupStatus.failed;
       case 'cancelled':

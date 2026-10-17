@@ -29,6 +29,12 @@ abstract class FoodBridgeRepository {
   // Organisations
   Future<List<OrganisationModel>> getOrganisations();
   Future<OrganisationModel?> getOrganisationById(String orgId);
+  Future<void> updateOrganisationStatus({
+    required String organisationId,
+    required bool isAcceptingDonations,
+    required String capacityStatus,
+    String? operatingHours,
+  });
 
   // Donations Lifecycle
   Future<DonationModel> createDonation({
@@ -45,6 +51,8 @@ abstract class FoodBridgeRepository {
     required String locationAddress,
     required String contactPerson,
     required String contactPhone,
+    double? latitude,
+    double? longitude,
   });
 
   Future<List<DonationModel>> getDonationsForCurrentRole();
@@ -78,6 +86,12 @@ abstract class FoodBridgeRepository {
     required double actualCollectedQuantity,
     required String actualQuantityUnit,
     required String driverNotes,
+  });
+  Future<void> acceptPickupRequest({required String pickupId});
+  Future<void> updatePickupTripStatus({
+    required String pickupId,
+    required PickupStatus status,
+    String? driverNotes,
   });
   Future<void> cancelPickup({
     required String pickupId,

@@ -8,6 +8,7 @@ import '../../../core/widgets/food_safety_disclaimer.dart';
 import '../../../core/providers/repository_providers.dart';
 import '../../../core/router/app_router.dart';
 import '../../../data/models/user_model.dart';
+import '../../../data/seed/seed_data.dart';
 
 class WelcomeScreen extends ConsumerWidget {
   const WelcomeScreen({super.key});
@@ -127,17 +128,17 @@ class WelcomeScreen extends ConsumerWidget {
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 1.1,
-                  color: Colors.black45,
+                  color: Colors.black54,
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
-                runSpacing: 8,
+                runSpacing: 10,
                 alignment: WrapAlignment.center,
                 children: [
                   _buildDemoChip(
-                    label: 'Donor (Canteen)',
+                    label: 'Step 1: Donor (Chef Anand)',
                     icon: Icons.storefront_rounded,
                     onTap: () async {
                       await userNotifier.switchDemoRole(UserRole.donor);
@@ -145,18 +146,34 @@ class WelcomeScreen extends ConsumerWidget {
                     },
                   ),
                   _buildDemoChip(
-                    label: 'NGO Staff',
-                    icon: Icons.food_bank_rounded,
+                    label: 'Step 2: NGO Staff (Sarah / Sevadeep)',
+                    icon: Icons.verified_user_rounded,
                     onTap: () async {
                       await userNotifier.switchDemoRole(UserRole.ngoStaff);
                       if (context.mounted) context.go(AppRoutes.home);
                     },
                   ),
                   _buildDemoChip(
-                    label: 'Volunteer Driver',
+                    label: 'Step 3: Driver 1 (Alex)',
                     icon: Icons.local_shipping_rounded,
                     onTap: () async {
-                      await userNotifier.switchDemoRole(UserRole.volunteer);
+                      ref.read(currentUserProvider.notifier).state = SeedData.users[2];
+                      if (context.mounted) context.go(AppRoutes.home);
+                    },
+                  ),
+                  _buildDemoChip(
+                    label: 'Driver 2 (Rahul Patil)',
+                    icon: Icons.electric_moped_rounded,
+                    onTap: () async {
+                      ref.read(currentUserProvider.notifier).state = SeedData.users[3];
+                      if (context.mounted) context.go(AppRoutes.home);
+                    },
+                  ),
+                  _buildDemoChip(
+                    label: 'Driver 3 (Sneha Deshmukh)',
+                    icon: Icons.directions_car_rounded,
+                    onTap: () async {
+                      ref.read(currentUserProvider.notifier).state = SeedData.users[4];
                       if (context.mounted) context.go(AppRoutes.home);
                     },
                   ),

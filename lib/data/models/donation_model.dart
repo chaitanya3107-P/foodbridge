@@ -16,6 +16,8 @@ class DonationModel {
   final DateTime pickupDeadline;
   final String locationName;
   final String locationAddress;
+  final double latitude;
+  final double longitude;
   final String contactPerson;
   final String contactPhone;
   final DonationStatus status;
@@ -40,6 +42,8 @@ class DonationModel {
     required this.pickupDeadline,
     required this.locationName,
     required this.locationAddress,
+    this.latitude = 18.5204,
+    this.longitude = 73.8567,
     required this.contactPerson,
     required this.contactPhone,
     required this.status,
@@ -61,6 +65,8 @@ class DonationModel {
     DateTime? pickupDeadline,
     String? locationName,
     String? locationAddress,
+    double? latitude,
+    double? longitude,
     String? contactPerson,
     String? contactPhone,
     DonationStatus? status,
@@ -84,6 +90,8 @@ class DonationModel {
       pickupDeadline: pickupDeadline ?? this.pickupDeadline,
       locationName: locationName ?? this.locationName,
       locationAddress: locationAddress ?? this.locationAddress,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
       contactPerson: contactPerson ?? this.contactPerson,
       contactPhone: contactPhone ?? this.contactPhone,
       status: status ?? this.status,
@@ -111,6 +119,8 @@ class DonationModel {
       'pickupDeadline': pickupDeadline.toIso8601String(),
       'locationName': locationName,
       'locationAddress': locationAddress,
+      'latitude': latitude,
+      'longitude': longitude,
       'contactPerson': contactPerson,
       'contactPhone': contactPhone,
       'status': status.name,
@@ -142,6 +152,8 @@ class DonationModel {
           : DateTime.now().add(const Duration(hours: 4)),
       locationName: map['locationName'] ?? '',
       locationAddress: map['locationAddress'] ?? '',
+      latitude: (map['latitude'] as num?)?.toDouble() ?? 18.5204,
+      longitude: (map['longitude'] as num?)?.toDouble() ?? 73.8567,
       contactPerson: map['contactPerson'] ?? '',
       contactPhone: map['contactPhone'] ?? '',
       status: DonationStatus.fromString(map['status'] ?? 'awaitingNgoReview'),

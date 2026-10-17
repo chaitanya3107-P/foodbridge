@@ -91,6 +91,44 @@ class AwarenessDashboardView extends ConsumerWidget {
             error: (_, __) => const SizedBox.shrink(),
           ),
 
+          const SizedBox(height: 12),
+
+          // Pune NGO Map Quick Access Banner
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => context.push(AppRoutes.mapView),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.blue.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.map_rounded, color: Colors.blue.shade700, size: 22),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Find Food Banks & Relief NGOs in Pune',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.blue),
+                        ),
+                        Text(
+                          'View verified shelters, community kitchens & directions',
+                          style: TextStyle(fontSize: 11, color: Colors.black54),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.blue.shade700),
+                ],
+              ),
+            ),
+          ),
+
           const SizedBox(height: 16),
 
           // Interactive Quiz Card

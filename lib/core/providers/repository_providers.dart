@@ -8,7 +8,9 @@ import '../../data/models/waste_audit_model.dart';
 import '../../data/models/distribution_model.dart';
 import '../../data/models/awareness_model.dart';
 import '../../data/models/audit_log_model.dart';
+import '../../data/models/organisation_model.dart';
 import '../calculators/impact_calculators.dart';
+import '../services/realtime_service.dart';
 
 /// Provider for the active repository implementation.
 final repositoryProvider = Provider<FoodBridgeRepository>((ref) {
@@ -104,3 +106,55 @@ final auditLogsProvider = FutureProvider<List<AuditLogModel>>((ref) async {
   final repo = ref.watch(repositoryProvider);
   return repo.getAuditLogs();
 });
+
+/// Provider for verified organisations and NGOs.
+final organisationsProvider = FutureProvider<List<OrganisationModel>>((ref) async {
+  final repo = ref.watch(repositoryProvider);
+  return repo.getOrganisations();
+});
+
+/// Provider for the singleton RealtimeService.
+final realtimeServiceProvider = Provider<RealtimeService>((ref) {
+  final service = RealtimeService();
+  // Listen to real-time events and invalidate relevant providers automatically
+  final sub = service.eventStream.listen((event) {
+    switch (event.type) {
+      case RealtimeEventType.foodAvailability:
+      case RealtimeEventType.donationTracking:
+        ref.invalidate(roleDonationsProvider);
+        ref.invalidate(rolePickupsProvider);
+        ref.invalidate(impactTotalsProvider);
+        break;
+      case RealtimeEventType.ngoStatus:
+      case RealtimeEventType.map:
+        ref.invalidate(organisationsProvider);
+        ref.invalidate(roleDonationsProvider);
+        break;
+      case RealtimeEventType.impactDashboard:
+        ref.invalidate(impactTotalsProvider);
+        ref.invalidate(distributionsProvider);
+        break;
+      case RealtimeEventType.notifications:
+        break;
+    }
+  });
+  ref.onDispose(() => sub.cancel());
+  return service;
+});
+
+/// StreamProvider for live notifications list.
+final realtimeNotificationsStreamProvider =
+    StreamProvider<List<RealtimeNotificationItem>>((ref) {
+  final service = ref.watch(realtimeServiceProvider);
+  return service.notificationStream;
+});
+
+/// Provider for unread notifications count.
+final unreadNotificationsCountProvider = Provider<int>((ref) {
+  final notificationsAsync = ref.watch(realtimeNotificationsStreamProvider);
+  return notificationsAsync.maybeWhen(
+    data: (list) => list.where((n) => !n.isRead).length,
+    orElse: () => ref.watch(realtimeServiceProvider).unreadCount,
+  );
+});
+

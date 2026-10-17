@@ -12,6 +12,7 @@ import '../widgets/ngo_dashboard_view.dart';
 import '../widgets/volunteer_dashboard_view.dart';
 import '../widgets/awareness_dashboard_view.dart';
 import '../widgets/admin_dashboard_view.dart';
+import '../../notifications/widgets/notification_center_sheet.dart';
 
 /// Main role-adaptive dashboard screen for FoodBridge.
 /// Dynamically renders role-specific workflows based on the logged-in user.
@@ -101,7 +102,7 @@ class RoleDashboardScreen extends ConsumerWidget {
                   children: [
                     Icon(Icons.storefront_outlined, size: 18, color: Colors.green),
                     SizedBox(width: 8),
-                    Text('Donor (Chef Anand)'),
+                    Text('Step 1: Donor (Chef Anand)'),
                   ],
                 ),
               ),
@@ -111,7 +112,7 @@ class RoleDashboardScreen extends ConsumerWidget {
                   children: [
                     Icon(Icons.verified_outlined, size: 18, color: Colors.amber),
                     SizedBox(width: 8),
-                    Text('NGO Staff (Sarah Jenkins)'),
+                    Text('Step 2: NGO Staff (Sarah / Sevadeep)'),
                   ],
                 ),
               ),
@@ -121,12 +122,32 @@ class RoleDashboardScreen extends ConsumerWidget {
                   children: [
                     Icon(Icons.local_shipping_outlined, size: 18, color: Colors.blue),
                     SizedBox(width: 8),
-                    Text('Volunteer (Alex Driver)'),
+                    Text('Driver 1 (Alex Driver)'),
                   ],
                 ),
               ),
               PopupMenuItem<UserModel>(
                 value: SeedData.users[3],
+                child: const Row(
+                  children: [
+                    Icon(Icons.electric_moped_outlined, size: 18, color: Colors.indigo),
+                    SizedBox(width: 8),
+                    Text('Driver 2 (Rahul Patil)'),
+                  ],
+                ),
+              ),
+              PopupMenuItem<UserModel>(
+                value: SeedData.users[4],
+                child: const Row(
+                  children: [
+                    Icon(Icons.directions_car_outlined, size: 18, color: Colors.teal),
+                    SizedBox(width: 8),
+                    Text('Driver 3 (Sneha Deshmukh)'),
+                  ],
+                ),
+              ),
+              PopupMenuItem<UserModel>(
+                value: SeedData.users[5],
                 child: const Row(
                   children: [
                     Icon(Icons.school_outlined, size: 18, color: Colors.teal),
@@ -136,7 +157,7 @@ class RoleDashboardScreen extends ConsumerWidget {
                 ),
               ),
               PopupMenuItem<UserModel>(
-                value: SeedData.users[4],
+                value: SeedData.users[6],
                 child: const Row(
                   children: [
                     Icon(Icons.admin_panel_settings_outlined, size: 18, color: Colors.purple),
@@ -146,6 +167,56 @@ class RoleDashboardScreen extends ConsumerWidget {
                 ),
               ),
             ],
+          ),
+          IconButton(
+            tooltip: 'Sign Out / Switch User',
+            icon: const Icon(Icons.logout_rounded),
+            onPressed: () {
+              ref.read(currentUserProvider.notifier).signOut();
+              context.go(AppRoutes.welcome);
+            },
+          ),
+          IconButton(
+            tooltip: 'Pune NGO & Food Map',
+            icon: const Icon(Icons.map_rounded),
+            onPressed: () => context.push(AppRoutes.mapView),
+          ),
+          Consumer(
+            builder: (context, ref, _) {
+              final unreadCount = ref.watch(unreadNotificationsCountProvider);
+              return IconButton(
+                tooltip: 'Live Notifications ($unreadCount)',
+                icon: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    const Icon(Icons.notifications_outlined),
+                    if (unreadCount > 0)
+                      Positioned(
+                        right: -3,
+                        top: -3,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: const BoxDecoration(
+                            color: Colors.redAccent,
+                            shape: BoxShape.circle,
+                          ),
+                          constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                          child: Text(
+                            '$unreadCount',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                onPressed: () => NotificationCenterSheet.show(context),
+              );
+            },
           ),
           IconButton(
             tooltip: 'Profile & Settings',

@@ -40,11 +40,34 @@ The application was built end-to-end across **5 sequential phases**:
 - **Data Visualization**: `fl_chart` for historical kitchen waste rate trend analytics
 - **Reporting & Export**: `csv` for audit data and `pdf` + `printing` for official printable PDF impact reports
 - **Cloud Backend**: Cloud Firestore (with role-based security rules) and Firebase Authentication
+- **Mapping & Geolocation**: OpenStreetMap (`flutter_map` + `latlong2`) for zero-cost, API-key-free interactive map rendering
+- **Turn-by-Turn Navigation**: `url_launcher` for 1-tap external Google Maps GPS directions
+- **Real-Time Engine**: Centralized reactive broadcast event bus (`RealtimeService`) driving live updates across 6 dimensions
 - **Demo Mode**: Built-in reactive in-memory repository pre-loaded with realistic seed data across all 5 roles, enabling zero-config demonstration and immediate evaluation.
 
 ---
 
-## 4. User Roles & Permission Matrix
+## 4. Real-Time Architecture & OpenStreetMap Engine
+
+### What Becomes Real-Time?
+
+| Feature | How It Updates Live |
+| :--- | :--- |
+| **Food availability** | When a donor posts or updates a donation listing, immediate alerts and map pin additions occur. |
+| **NGO status** | When authorized staff update operating or availability information (*Accepting Donations* vs *At Capacity*). |
+| **Donation tracking** | When an NGO accepts, schedules, or a volunteer driver weighs and collects surplus food. |
+| **Map** | When approved intake locations, NGO availability, or donation pickup coordinates change. |
+| **Notifications** | When the notification service broadcasts system-wide or role-targeted alert toasts. |
+| **Impact dashboard** | When completed donations or distributions are recorded, instantly updating rescued kg and CO₂ savings. |
+
+### Pune City OpenStreetMap Network & 1-Tap Directions
+- **OpenStreetMap Interactive Layer**: Centered on Pune City (`18.5204° N, 73.8567° E`) with custom markers for NGOs (Green for Accepting, Orange for High Demand, Indigo for Central Food Banks) and active surplus food pickups.
+- **Real Pune NGO Dataset**: Pre-populated with authentic organizations including **Robin Hood Army Pune** (Viman Nagar), **Feeding India by Zomato** (Shivajinagar), **Seva Sahayog Foundation** (Karve Nagar), **Janwani MCCIA** (SB Road), **Maher Ashram** (Wagholi), and **Hope for Children** (Koregaon Park).
+- **1-Tap Navigation**: Tapping **"Get Directions"** launches native Google Maps turn-by-turn GPS navigation directly to the NGO or food donor's exact coordinates.
+
+---
+
+## 5. User Roles & Permission Matrix
 
 1. **Food Donor**: Canteens, restaurants, and event caterers. Creates surplus food listings, tracks own listings, submits daily waste audits, and views site impact.
 2. **NGO / Food Bank Staff**: Holds final authority over food intake. Reviews listings against configurable safety checklists, accepts/rejects/requests clarification, assigns volunteer drivers, and logs food bank distribution ledgers.
@@ -54,7 +77,7 @@ The application was built end-to-end across **5 sequential phases**:
 
 ---
 
-## 5. Strict Donation Lifecycle State Machine
+## 6. Strict Donation Lifecycle State Machine
 
 ```
 Draft ──► Submitted ──► Awaiting NGO Review ──► Accepted ──► Pickup Scheduled ──► Collected ──► Distribution Recorded ──► Closed
@@ -74,7 +97,7 @@ Draft ──► Submitted ──► Awaiting NGO Review ──► Accepted ─�
 
 ---
 
-## 6. Mathematical Formulas & Business Logic
+## 7. Mathematical Formulas & Business Logic
 
 Encapsulated in pure, unit-tested functions in `lib/core/calculators/impact_calculators.dart`:
 
@@ -90,7 +113,7 @@ Encapsulated in pure, unit-tested functions in `lib/core/calculators/impact_calc
 
 ---
 
-## 7. Setup & Run Instructions
+## 8. Setup & Run Instructions
 
 ### Prerequisites
 - Flutter SDK (>= 3.3.0)
@@ -123,7 +146,7 @@ flutter run
 
 ---
 
-## 8. Five-Minute Demo Walkthrough Script
+## 9. Five-Minute Demo Walkthrough Script
 
 Evaluate the complete end-to-end flow using the interactive 1-tap demo tools:
 

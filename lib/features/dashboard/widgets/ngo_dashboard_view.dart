@@ -8,6 +8,9 @@ import '../../../core/router/app_router.dart';
 import '../../../core/providers/repository_providers.dart';
 import '../../../core/state/donation_status_engine.dart';
 import '../../../data/models/user_model.dart';
+import '../../../data/models/donation_model.dart';
+import '../../donations/screens/ngo_review_screen.dart';
+import '../../logistics/widgets/dispatch_and_porter_sheet.dart';
 
 class NgoDashboardView extends ConsumerWidget {
   final UserModel user;
@@ -32,7 +35,7 @@ class NgoDashboardView extends ConsumerWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            'Reviewer: ${user.name} • City Harvest Food Bank',
+            'Reviewer: ${user.name} • Sevadeep / City Harvest Food Bank',
             style: const TextStyle(fontSize: 13, color: Color(0xFF4A5D54)),
           ),
 
@@ -53,14 +56,52 @@ class NgoDashboardView extends ConsumerWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: AppButton(
-                  label: 'Food Bank Ledger',
-                  icon: Icons.menu_book_rounded,
-                  variant: AppButtonVariant.outline,
+                  label: 'Logistics Console',
+                  icon: Icons.local_shipping_outlined,
+                  variant: AppButtonVariant.secondary,
                   height: 48,
-                  onPressed: () => context.push(AppRoutes.foodBankRecords),
+                  onPressed: () => context.push(AppRoutes.pickupTracking),
                 ),
               ),
             ],
+          ),
+
+          const SizedBox(height: 10),
+
+          // Pune NGO Map Quick Access Banner
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => context.push(AppRoutes.mapView),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.blue.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.map_rounded, color: Colors.blue.shade700, size: 22),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Pune Food Rescue Map & Live Status',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.blue),
+                        ),
+                        Text(
+                          'Sevadeep Platform, Kalyani Nagar & Pune Intake Network',
+                          style: TextStyle(fontSize: 11, color: Colors.black54),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.blue.shade700),
+                ],
+              ),
+            ),
           ),
 
           const SizedBox(height: 16),
@@ -70,6 +111,9 @@ class NgoDashboardView extends ConsumerWidget {
             data: (donations) {
               final awaitingReviewCount = donations
                   .where((d) => d.status == DonationStatus.awaitingNgoReview)
+                  .length;
+              final readyToDispatchCount = donations
+                  .where((d) => d.status == DonationStatus.accepted)
                   .length;
               final scheduledCount = donations
                   .where((d) => d.status == DonationStatus.pickupScheduled)
@@ -84,7 +128,7 @@ class NgoDashboardView extends ConsumerWidget {
                     children: [
                       Expanded(
                         child: _buildKpiCard(
-                          title: 'Awaiting NGO Review',
+                          title: 'Awaiting Review',
                           value: '$awaitingReviewCount',
                           icon: Icons.notification_important_rounded,
                           color: const Color(0xFFE65100),
@@ -95,11 +139,12 @@ class NgoDashboardView extends ConsumerWidget {
                       const SizedBox(width: 10),
                       Expanded(
                         child: _buildKpiCard(
-                          title: 'Pickups Scheduled',
-                          value: '$scheduledCount',
-                          icon: Icons.local_shipping_outlined,
-                          color: const Color(0xFF0277BD),
-                          bgColor: const Color(0xFFE1F5FE),
+                          title: 'Ready to Dispatch',
+                          value: '$readyToDispatchCount',
+                          icon: Icons.schedule_send_rounded,
+                          color: const Color(0xFF00695C),
+                          bgColor: const Color(0xFFE0F2F1),
+                          isUrgent: readyToDispatchCount > 0,
                         ),
                       ),
                     ],
@@ -109,31 +154,21 @@ class NgoDashboardView extends ConsumerWidget {
                     children: [
                       Expanded(
                         child: _buildKpiCard(
+                          title: 'Pickups Scheduled',
+                          value: '$scheduledCount',
+                          icon: Icons.local_shipping_outlined,
+                          color: const Color(0xFF0277BD),
+                          bgColor: const Color(0xFFE1F5FE),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _buildKpiCard(
                           title: 'Ready for Distribution',
                           value: '$collectedCount',
                           icon: Icons.inventory_rounded,
                           color: AppTheme.primaryGreen,
                           bgColor: AppTheme.primaryContainer,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: distributionsAsync.when(
-                          data: (dists) {
-                            final totalKg = dists.fold<double>(
-                              0.0,
-                              (sum, d) => sum + d.quantityDistributed,
-                            );
-                            return _buildKpiCard(
-                              title: 'Verified Distributed',
-                              value: '${totalKg.toStringAsFixed(0)} kg',
-                              icon: Icons.volunteer_activism_rounded,
-                              color: const Color(0xFF2E7D32),
-                              bgColor: const Color(0xFFE8F5E9),
-                            );
-                          },
-                          loading: () => _buildKpiCard(title: 'Verified Distributed', value: '...', icon: Icons.volunteer_activism_rounded, color: Colors.grey, bgColor: Colors.grey.shade100),
-                          error: (_, __) => _buildKpiCard(title: 'Verified Distributed', value: '0 kg', icon: Icons.volunteer_activism_rounded, color: Colors.grey, bgColor: Colors.grey.shade100),
                         ),
                       ),
                     ],
@@ -145,9 +180,124 @@ class NgoDashboardView extends ConsumerWidget {
             error: (e, _) => Text('Error loading stats: $e'),
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
 
-          // Immediate Review Queue Section
+          // 1. INTAKE ACCEPTED: READY FOR DRIVER DISPATCH & PORTER BOOKING
+          donationsAsync.when(
+            data: (donations) {
+              final acceptedDonations = donations
+                  .where((d) => d.status == DonationStatus.accepted)
+                  .toList();
+
+              if (acceptedDonations.isEmpty) return const SizedBox.shrink();
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.local_shipping_rounded, color: Color(0xFF00695C), size: 20),
+                      const SizedBox(width: 6),
+                      const Text(
+                        'Step 2: Intake Accepted (Dispatch Driver / Porter)',
+                        style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800, color: Color(0xFF004D40)),
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(color: const Color(0xFFE0F2F1), borderRadius: BorderRadius.circular(10)),
+                        child: Text('${acceptedDonations.length} Action Needed', style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF004D40))),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  ...acceptedDonations.map((d) {
+                    return Card(
+                      color: const Color(0xFFF0FDF4),
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        side: const BorderSide(color: Color(0xFFA7F3D0), width: 1.5),
+                      ),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: Padding(
+                        padding: const EdgeInsets.all(14.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    d.foodDescription,
+                                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(color: const Color(0xFFDCFCE7), borderRadius: BorderRadius.circular(8)),
+                                  child: const Text('Intake Approved', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF15803D))),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Offered: ${d.listedQuantity} ${d.unit} • Storage: ${d.storageCondition}',
+                              style: const TextStyle(fontSize: 13, color: Colors.black87, fontWeight: FontWeight.w500),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Pickup Point: ${d.locationName} (${d.locationAddress})',
+                              style: const TextStyle(fontSize: 12, color: Colors.black54),
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppTheme.primaryGreen,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(vertical: 11),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    ),
+                                    icon: const Icon(Icons.flash_on_rounded, size: 16),
+                                    label: const Text('Broadcast to Drivers', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5)),
+                                    onPressed: () => DispatchAndPorterSheet.show(context, d),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: Colors.blue.shade800,
+                                      side: BorderSide(color: Colors.blue.shade700),
+                                      padding: const EdgeInsets.symmetric(vertical: 11),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    ),
+                                    icon: const Icon(Icons.local_shipping_rounded, size: 16),
+                                    label: const Text('Book Porter', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5)),
+                                    onPressed: () => DispatchAndPorterSheet.show(context, d),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 12),
+                ],
+              );
+            },
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+          ),
+
+          // 2. INCOMING INTAKE QUEUE (AWAITING NGO REVIEW)
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -156,7 +306,7 @@ class NgoDashboardView extends ConsumerWidget {
                   Icon(Icons.shield_outlined, size: 18, color: AppTheme.primaryGreen),
                   SizedBox(width: 6),
                   Text(
-                    'Incoming Intake Queue',
+                    'Step 1: Incoming Intake Queue',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1E3228)),
                   ),
                 ],
@@ -237,7 +387,14 @@ class NgoDashboardView extends ConsumerWidget {
                             icon: Icons.fact_check_outlined,
                             variant: AppButtonVariant.primary,
                             height: 44,
-                            onPressed: () => context.push(AppRoutes.availableDonations),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => NgoReviewScreen(donation: d),
+                                ),
+                              );
+                            },
                           ),
                         ],
                       ),
@@ -270,7 +427,7 @@ class NgoDashboardView extends ConsumerWidget {
         color: bgColor,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isUrgent ? Colors.deepOrange : color.withOpacity(0.3),
+          color: isUrgent ? color : color.withOpacity(0.3),
           width: isUrgent ? 1.8 : 1.0,
         ),
       ),
